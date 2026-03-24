@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mariana & Diego • Lista de Casamento</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="page-bg"></div>
+  <header class="hero">
+    <div class="hero-card">
+      <p class="eyebrow">Lista de casamento</p>
+      <h1><span id="coupleNames">Mariana &amp; Diego</span></h1>
+      <p class="subtitle">Escolha um presente, envie um PIX ou confirme sua presença para <span id="eventDateLong">18 de abril de 2026 às 16h</span>.</p>
+      <div class="event-meta">
+        <div class="meta-pill" id="eventDate">18/04/2026</div>
+        <div class="meta-pill" id="eventTime">16h</div>
+      </div>
+      <div class="hero-actions">
+        <a href="#presentes" class="btn btn-primary">Ver presentes</a>
+        <a href="#rsvp" class="btn btn-secondary">Confirmar presença</a>
+        <button id="shareBtn" class="btn btn-secondary" type="button">Compartilhar no WhatsApp</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="panel-grid">
+      <article class="panel">
+        <p class="panel-label">Presentes</p>
+        <h2 id="kpiDisponiveis">--</h2>
+        <p class="panel-desc">itens disponíveis no momento</p>
+      </article>
+      <article class="panel">
+        <p class="panel-label">Escolhidos</p>
+        <h2 id="kpiEscolhidos">--</h2>
+        <p class="panel-desc">reservados pelos convidados</p>
+      </article>
+      <article class="panel">
+        <p class="panel-label">Confirmações</p>
+        <h2 id="kpiConfirmados">--</h2>
+        <p class="panel-desc">presenças confirmadas</p>
+      </article>
+    </section>
+
+    <section class="pix-banner">
+      <div>
+        <p class="panel-label">Presente via PIX</p>
+        <h3>Contribua com qualquer valor</h3>
+        <p>Ideal para quem prefere presentear em dinheiro.</p>
+      </div>
+      <div class="pix-actions">
+        <code id="pixKeyView">SUA-CHAVE-PIX-AQUI</code>
+        <button id="copyPixBtn" class="btn btn-primary" type="button">Copiar chave PIX</button>
+      </div>
+    </section>
+
+    <section id="presentes" class="section">
+      <div class="section-head">
+        <div>
+          <p class="panel-label">Escolha seu presente</p>
+          <h2>Lista de presentes</h2>
+        </div>
+        <div class="filters">
+          <input id="searchInput" type="search" placeholder="Buscar item..." />
+          <select id="categoriaFiltro">
+            <option value="">Todas as categorias</option>
+          </select>
+          <select id="faixaFiltro">
+            <option value="">Todas as faixas</option>
+          </select>
+        </div>
+      </div>
+      <div id="cards" class="cards"></div>
+      <p id="emptyState" class="empty hidden">Nenhum presente encontrado com esse filtro.</p>
+    </section>
+
+    <section id="rsvp" class="section two-col">
+      <div class="panel form-panel">
+        <p class="panel-label">RSVP</p>
+        <h2>Confirme sua presença</h2>
+        <form id="rsvpForm" class="form">
+          <input name="nome" type="text" placeholder="Seu nome" required />
+          <input name="whatsapp" type="text" placeholder="WhatsApp" />
+          <select name="resposta" required>
+            <option value="sim">Sim, vou ao casamento</option>
+            <option value="nao">Não poderei ir</option>
+          </select>
+          <textarea name="mensagem" placeholder="Mensagem aos noivos (opcional)"></textarea>
+          <button class="btn btn-primary" type="submit">Enviar confirmação</button>
+        </form>
+      </div>
+      <div class="panel tips-panel">
+        <p class="panel-label">Como funciona</p>
+        <h2>Experiência profissional</h2>
+        <ul class="tips">
+          <li>Quando alguém escolhe um item, ele fica indisponível para as próximas pessoas.</li>
+          <li>Quem preferir pode presentear via PIX.</li>
+          <li>As confirmações de presença ficam registradas no banco de dados.</li>
+          <li>O link pode ser enviado normalmente pelo WhatsApp.</li>
+        </ul>
+        <div class="note">
+          <strong>Importante:</strong> para funcionar online de verdade para todos os convidados, preencha o arquivo <code>config.js</code> com as credenciais do Supabase e rode o script SQL incluído na pasta.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="giftDialog" class="dialog">
+    <form id="giftForm" method="dialog" class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <p class="panel-label">Reservar presente</p>
+          <h3 id="giftDialogTitle">Item</h3>
+        </div>
+        <button type="button" class="icon-btn" id="closeDialogBtn">✕</button>
+      </div>
+      <input type="hidden" name="item_id" />
+      <input type="hidden" name="item_nome" />
+      <input name="convidado" type="text" placeholder="Seu nome" required />
+      <input name="whatsapp" type="text" placeholder="WhatsApp" />
+      <select name="confirmacao_presenca">
+        <option value="">Deseja confirmar presença agora?</option>
+        <option value="sim">Sim</option>
+        <option value="nao">Não</option>
+      </select>
+      <textarea name="observacao" placeholder="Observação opcional"></textarea>
+      <button class="btn btn-primary" type="submit">Confirmar presente</button>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="./data.js"></script>
+  <script src="./config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
