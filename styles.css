@@ -116,3 +116,4 @@ code{
 .toast{position:fixed; right:20px; bottom:20px; background:#2f261e; color:white; padding:14px 16px; border-radius:14px; box-shadow:var(--shadow); z-index:1000}
 @media (max-width: 920px){.panel-grid,.cards,.two-col{grid-template-columns:1fr 1fr}}
 @media (max-width: 680px){.panel-grid,.cards,.two-col{grid-template-columns:1fr}.hero-card{padding:38px 22px}.pix-banner{padding:20px}}
+/* update */
