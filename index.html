@@ -23,13 +23,15 @@
       </div>
       <div class="hero-actions">
         <a href="#presentes" class="btn btn-primary">Ver presentes</a>
-        <a href="#rsvp" class="btn btn-secondary">Confirmar presença</a>
+        <a href="#presenca" class="btn btn-secondary">Confirmar presença</a>
         <button id="shareBtn" class="btn btn-secondary" type="button">Compartilhar no WhatsApp</button>
       </div>
     </div>
   </header>
 
   <main class="container">
+    <div id="configBanner" class="config-banner hidden"></div>
+
     <section class="panel-grid">
       <article class="panel">
         <p class="panel-label">Presentes</p>
@@ -80,10 +82,10 @@
       <p id="emptyState" class="empty hidden">Nenhum presente encontrado com esse filtro.</p>
     </section>
 
-    <section id="rsvp" class="section two-col">
+    <section id="presenca" class="section two-col">
       <div class="panel form-panel">
-        <p class="panel-label">RSVP</p>
         <h2>Confirme sua presença</h2>
+        <p class="panel-desc intro-text">A confirmação fica registrada separadamente da reserva do presente.</p>
         <form id="rsvpForm" class="form">
           <input name="nome" type="text" placeholder="Seu nome" required />
           <input name="whatsapp" type="text" placeholder="WhatsApp" />
@@ -95,18 +97,16 @@
           <button class="btn btn-primary" type="submit">Enviar confirmação</button>
         </form>
       </div>
-      <div class="panel tips-panel">
-        <p class="panel-label">Como funciona</p>
-        <h2>Experiência profissional</h2>
-        <ul class="tips">
-          <li>Quando alguém escolhe um item, ele fica indisponível para as próximas pessoas.</li>
-          <li>Quem preferir pode presentear via PIX.</li>
-          <li>As confirmações de presença ficam registradas no banco de dados.</li>
-          <li>O link pode ser enviado normalmente pelo WhatsApp.</li>
-        </ul>
-        <div class="note">
-          <strong>Importante:</strong> para funcionar online de verdade para todos os convidados, preencha o arquivo <code>config.js</code> com as credenciais do Supabase e rode o script SQL incluído na pasta.
-        </div>
+
+      <div class="panel form-panel">
+        <h2>Desistir de um presente</h2>
+        <p class="panel-desc intro-text">Se alguém desistir, o presente volta a ficar livre. Isso não altera a confirmação de presença.</p>
+        <form id="cancelForm" class="form">
+          <input name="cancel_code" type="text" placeholder="Código de cancelamento do presente" required />
+          <input name="cancelled_by" type="text" placeholder="Seu nome" />
+          <textarea name="note" placeholder="Motivo da desistência (opcional)"></textarea>
+          <button class="btn btn-secondary" type="submit">Liberar presente novamente</button>
+        </form>
       </div>
     </section>
   </main>
@@ -131,7 +131,30 @@
       </select>
       <textarea name="observacao" placeholder="Observação opcional"></textarea>
       <button class="btn btn-primary" type="submit">Confirmar presente</button>
+      <p class="mini-help">Após reservar, o site mostrará um código para desistência futura, se necessário.</p>
     </form>
+  </dialog>
+
+  <dialog id="resultDialog" class="dialog">
+    <div class="dialog-card success-card">
+      <div class="dialog-head">
+        <div>
+          <p class="panel-label">Concluído</p>
+          <h3 id="resultTitle">Tudo certo</h3>
+        </div>
+        <button type="button" class="icon-btn" id="closeResultDialogBtn">✕</button>
+      </div>
+      <p id="resultMessage" class="panel-desc"></p>
+      <div id="cancelCodeWrap" class="code-wrap hidden">
+        <span class="panel-label">Guarde este código</span>
+        <code id="cancelCodeView"></code>
+      </div>
+      <div class="result-actions">
+        <a id="notifyEmailLink" class="link-btn hidden" target="_blank" rel="noopener noreferrer">Avisar por e-mail</a>
+        <a id="notifyWhatsappLink" class="link-btn hidden" target="_blank" rel="noopener noreferrer">Avisar no WhatsApp</a>
+      </div>
+      <button type="button" class="btn btn-primary" id="closeResultBtn">Fechar</button>
+    </div>
   </dialog>
 
   <div id="toast" class="toast hidden"></div>

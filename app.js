@@ -23,11 +23,22 @@ const el = {
   pixKeyView: document.getElementById('pixKeyView'),
   copyPixBtn: document.getElementById('copyPixBtn'),
   rsvpForm: document.getElementById('rsvpForm'),
+  cancelForm: document.getElementById('cancelForm'),
   shareBtn: document.getElementById('shareBtn'),
   coupleNames: document.getElementById('coupleNames'),
   eventDate: document.getElementById('eventDate'),
   eventTime: document.getElementById('eventTime'),
   eventDateLong: document.getElementById('eventDateLong'),
+  configBanner: document.getElementById('configBanner'),
+  resultDialog: document.getElementById('resultDialog'),
+  resultTitle: document.getElementById('resultTitle'),
+  resultMessage: document.getElementById('resultMessage'),
+  cancelCodeWrap: document.getElementById('cancelCodeWrap'),
+  cancelCodeView: document.getElementById('cancelCodeView'),
+  notifyEmailLink: document.getElementById('notifyEmailLink'),
+  notifyWhatsappLink: document.getElementById('notifyWhatsappLink'),
+  closeResultDialogBtn: document.getElementById('closeResultDialogBtn'),
+  closeResultBtn: document.getElementById('closeResultBtn'),
 };
 
 function currencyBRL(value) {
@@ -53,7 +64,44 @@ function showToast(message, isError = false) {
   el.toast.classList.remove('hidden');
   el.toast.style.background = isError ? '#8b2d2d' : '#2f261e';
   clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => el.toast.classList.add('hidden'), 3200);
+  showToast.timer = setTimeout(() => el.toast.classList.add('hidden'), 3400);
+}
+
+function showResult({ title, message, cancelCode = '', eventText = '' }) {
+  el.resultTitle.textContent = title;
+  el.resultMessage.textContent = message;
+  el.cancelCodeWrap.classList.toggle('hidden', !cancelCode);
+  el.cancelCodeView.textContent = cancelCode;
+
+  const email = window.APP_CONFIG.notifications?.email?.trim();
+  const whatsapp = String(window.APP_CONFIG.notifications?.whatsapp || '').replace(/\D/g, '');
+
+  if (email) {
+    const subject = encodeURIComponent(`Site do casamento — ${title}`);
+    const body = encodeURIComponent(eventText || message);
+    el.notifyEmailLink.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    el.notifyEmailLink.classList.remove('hidden');
+  } else {
+    el.notifyEmailLink.classList.add('hidden');
+  }
+
+  if (whatsapp) {
+    const text = encodeURIComponent(eventText || message);
+    el.notifyWhatsappLink.href = `https://wa.me/${whatsapp}?text=${text}`;
+    el.notifyWhatsappLink.classList.remove('hidden');
+  } else {
+    el.notifyWhatsappLink.classList.add('hidden');
+  }
+
+  el.resultDialog.showModal();
+}
+
+function closeResultDialog() {
+  el.resultDialog.close();
+}
+
+function randomCancelCode() {
+  return `CASA-${Math.random().toString(36).slice(2, 6).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`;
 }
 
 function getPresetReservedIds() {
@@ -105,23 +153,24 @@ function renderCards() {
   el.empty.classList.toggle('hidden', list.length > 0);
 
   list.forEach(item => {
+    let domainLabel = 'uma loja sugerida';
+    try {
+      domainLabel = item.link ? new URL(item.link).hostname.replace('www.', '') : domainLabel;
+    } catch (_e) {}
+
     const card = document.createElement('article');
     card.className = 'card';
-    const domainLabel = item.link ? (() => {
-      try { return new URL(item.link).hostname.replace('www.', ''); } catch { return 'loja online'; }
-    })() : '';
-
     card.innerHTML = `
       <div class="card-body">
         <div class="badges">
-          <span class="badge">${escapeHtml(item.categoria)}</span>
-          <span class="badge">${escapeHtml(item.faixa)}</span>
+          ${item.categoria ? `<span class="badge">${escapeHtml(item.categoria)}</span>` : ''}
+          ${item.faixa ? `<span class="badge status-off">${escapeHtml(item.faixa)}</span>` : ''}
         </div>
         <h3>${escapeHtml(item.item)}</h3>
         <p class="price"><strong>${currencyBRL(item.preco)}</strong></p>
         <p>${item.link ? `Ao clicar em <strong>Ver na loja</strong>, a pessoa será redirecionada para a sugestão de compra em ${escapeHtml(domainLabel)}.` : 'Presente disponível para reserva.'}</p>
         <div class="card-footer">
-          <a class="link-btn" href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">Ver na loja</a>
+          ${item.link ? `<a class="link-btn" href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">Ver na loja</a>` : ''}
           <button class="btn btn-primary reserve-btn" data-id="${escapeHtml(item.id)}">Já comprei / reservar</button>
         </div>
       </div>`;
@@ -163,7 +212,8 @@ async function initSupabase() {
   setEventTexts();
 
   if (!url || url.includes('COLE_') || !anonKey || anonKey.includes('COLE_')) {
-    showToast('Site carregado em modo demonstração. Preencha o config.js para salvar online.', true);
+    el.configBanner.textContent = 'O site está em modo demonstração. Para gravar RSVP e reservas online, atualize o config.js com a URL do Supabase e a Publishable key, depois faça novo deploy na Vercel.';
+    el.configBanner.classList.remove('hidden');
     hydrateDemoData();
     return;
   }
@@ -210,29 +260,61 @@ async function loadRsvps() {
   updateKPIs();
 }
 
+async function submitRsvp(formData) {
+  const payload = {
+    nome: formData.get('nome'),
+    whatsapp: formData.get('whatsapp') || null,
+    resposta: formData.get('resposta'),
+    mensagem: formData.get('mensagem') || null,
+  };
+
+  if (!state.supabase) {
+    showToast('A confirmação não será salva enquanto o config.js estiver sem as credenciais do Supabase.', true);
+    return;
+  }
+
+  const { error } = await state.supabase.from('rsvps').insert(payload);
+  if (error) {
+    console.error(error);
+    showToast('Não foi possível gravar a confirmação.', true);
+    return;
+  }
+
+  el.rsvpForm.reset();
+  await loadRsvps();
+
+  const eventText = `Nova confirmação no site do casamento.%0A%0ANome: ${payload.nome}%0AWhatsApp: ${payload.whatsapp || '-'}%0AResposta: ${payload.resposta}%0AMensagem: ${payload.mensagem || '-'}`;
+  showResult({
+    title: 'Presença confirmada',
+    message: 'Sua resposta foi gravada com sucesso.',
+    eventText
+  });
+}
+
 async function reserveGift(formData) {
   const itemId = formData.get('item_id');
-
   if (getReservedIds().has(itemId)) {
     showToast('Esse presente já foi reservado.', true);
     closeGiftDialog();
     return;
   }
 
+  const cancelCode = randomCancelCode();
   const payload = {
     item_id: itemId,
     item_nome: formData.get('item_nome'),
     convidado: formData.get('convidado'),
     whatsapp: formData.get('whatsapp') || null,
     observacao: formData.get('observacao') || null,
-    confirmacao_presenca: formData.get('confirmacao_presenca') || null
+    confirmacao_presenca: formData.get('confirmacao_presenca') || null,
+    cancel_code: cancelCode,
   };
 
   if (!state.supabase) {
     state.pendingReservationIds.add(itemId);
     updateKPIs();
     renderCards();
-    showToast('Modo demonstração: item bloqueado só nesta visualização. Conecte o Supabase para salvar para todos.', true);
+    showToast('A reserva não será compartilhada com todos enquanto o config.js estiver sem as credenciais do Supabase.', true);
     closeGiftDialog();
     return;
   }
@@ -242,7 +324,6 @@ async function reserveGift(formData) {
   renderCards();
 
   const { error } = await state.supabase.from('gift_reservations').insert(payload);
-
   if (error) {
     console.error(error);
     state.pendingReservationIds.delete(itemId);
@@ -252,93 +333,121 @@ async function reserveGift(formData) {
   }
 
   if (payload.confirmacao_presenca) {
-    await state.supabase.from('rsvps').insert({
+    const { error: rsvpError } = await state.supabase.from('rsvps').insert({
       nome: payload.convidado,
       whatsapp: payload.whatsapp,
       resposta: payload.confirmacao_presenca,
       mensagem: payload.observacao
     });
+    if (rsvpError) console.error(rsvpError);
   }
 
-  state.pendingReservationIds.delete(itemId);
-  showToast('Presente reservado com sucesso!');
   closeGiftDialog();
   await Promise.all([loadReservations(), loadRsvps()]);
+
+  const eventText = `Nova reserva no site do casamento.%0A%0ANome: ${payload.convidado}%0APresente: ${payload.item_nome}%0AWhatsApp: ${payload.whatsapp || '-'}%0AConfirmação de presença: ${payload.confirmacao_presenca || '-'}%0ACódigo de cancelamento: ${cancelCode}`;
+  showResult({
+    title: 'Presente reservado',
+    message: 'Reserva registrada com sucesso. Guarde o código abaixo para liberar o presente no futuro, se necessário.',
+    cancelCode,
+    eventText
+  });
 }
 
-async function submitRsvp(formData) {
-  const payload = {
-    nome: formData.get('nome'),
-    whatsapp: formData.get('whatsapp') || null,
-    resposta: formData.get('resposta'),
-    mensagem: formData.get('mensagem') || null
-  };
+async function cancelGift(formData) {
+  const cancelCode = String(formData.get('cancel_code') || '').trim();
+  const cancelledBy = formData.get('cancelled_by') || null;
+  const note = formData.get('note') || null;
 
   if (!state.supabase) {
-    state.rsvps.unshift(payload);
-    updateKPIs();
-    showToast('Modo demonstração: confirmação salva só nesta visualização.', true);
-    el.rsvpForm.reset();
+    showToast('A desistência não será salva enquanto o config.js estiver sem as credenciais do Supabase.', true);
     return;
   }
 
-  const { error } = await state.supabase.from('rsvps').insert(payload);
+  const { data, error } = await state.supabase.rpc('cancel_gift_by_code', {
+    p_cancel_code: cancelCode,
+    p_cancelled_by: cancelledBy,
+    p_note: note,
+  });
+
   if (error) {
     console.error(error);
-    showToast('Não foi possível registrar sua resposta.', true);
+    showToast('Código não encontrado ou cancelamento não disponível.', true);
     return;
   }
-  showToast('Presença registrada com sucesso!');
-  el.rsvpForm.reset();
-  await loadRsvps();
+
+  el.cancelForm.reset();
+  await loadReservations();
+
+  const item = Array.isArray(data) && data[0] ? data[0] : null;
+  const eventText = `Houve desistência de presente no site do casamento.%0A%0APresente liberado: ${item?.item_nome || '-'}%0AInformado por: ${cancelledBy || '-'}%0AObservação: ${note || '-'}%0ACódigo usado: ${cancelCode}`;
+  showResult({
+    title: 'Presente liberado novamente',
+    message: 'O presente voltou a ficar disponível. A confirmação de presença foi mantida separadamente.',
+    eventText
+  });
 }
 
-async function shareSite() {
-  const text = `${window.APP_CONFIG.wedding.whatsappShareText}${window.location.href}`;
-  if (navigator.share) {
+function attachEvents() {
+  el.search.addEventListener('input', renderCards);
+  el.categoria.addEventListener('change', renderCards);
+  el.faixa.addEventListener('change', renderCards);
+
+  el.cards.addEventListener('click', (event) => {
+    const btn = event.target.closest('.reserve-btn');
+    if (!btn) return;
+    openGiftDialog(btn.dataset.id);
+  });
+
+  el.closeDialogBtn.addEventListener('click', closeGiftDialog);
+  el.dialog.addEventListener('click', (event) => {
+    if (event.target === el.dialog) closeGiftDialog();
+  });
+  el.closeResultDialogBtn.addEventListener('click', closeResultDialog);
+  el.closeResultBtn.addEventListener('click', closeResultDialog);
+  el.resultDialog.addEventListener('click', (event) => {
+    if (event.target === el.resultDialog) closeResultDialog();
+  });
+
+  el.giftForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(el.giftForm);
+    await reserveGift(formData);
+  });
+
+  el.rsvpForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(el.rsvpForm);
+    await submitRsvp(formData);
+  });
+
+  el.cancelForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(el.cancelForm);
+    await cancelGift(formData);
+  });
+
+  el.copyPixBtn.addEventListener('click', async () => {
     try {
-      await navigator.share({ title: document.title, text, url: window.location.href });
-      return;
-    } catch {}
-  }
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-  window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      await navigator.clipboard.writeText(window.APP_CONFIG.wedding.pixKey || '');
+      showToast('Chave PIX copiada.');
+    } catch (_e) {
+      showToast('Não foi possível copiar a chave PIX.', true);
+    }
+  });
+
+  el.shareBtn.addEventListener('click', () => {
+    const text = `${window.APP_CONFIG.wedding.whatsappShareText}${window.location.href}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  });
 }
 
-document.addEventListener('click', (event) => {
-  const reserveBtn = event.target.closest('.reserve-btn');
-  if (reserveBtn) openGiftDialog(reserveBtn.dataset.id);
-});
+function bootstrap() {
+  fillFilters();
+  attachEvents();
+  updateKPIs();
+  renderCards();
+  initSupabase();
+}
 
-el.closeDialogBtn.addEventListener('click', closeGiftDialog);
-el.search.addEventListener('input', renderCards);
-el.categoria.addEventListener('change', renderCards);
-el.faixa.addEventListener('change', renderCards);
-el.shareBtn?.addEventListener('click', shareSite);
-
-el.giftForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const formData = new FormData(el.giftForm);
-  await reserveGift(formData);
-});
-
-el.rsvpForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const formData = new FormData(el.rsvpForm);
-  await submitRsvp(formData);
-});
-
-el.copyPixBtn.addEventListener('click', async () => {
-  const key = window.APP_CONFIG.wedding.pixKey;
-  try {
-    await navigator.clipboard.writeText(key);
-    showToast('Chave PIX copiada!');
-  } catch {
-    showToast('Não foi possível copiar a chave PIX.', true);
-  }
-});
-
-fillFilters();
-initSupabase();
-renderCards();
-updateKPIs();
+bootstrap();
