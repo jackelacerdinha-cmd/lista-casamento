@@ -15,7 +15,7 @@ body{
   margin:0;
   font-family:Inter,system-ui,sans-serif;
   color:var(--text);
-  background:linear-gradient(180deg,#f9f5f0 0%, #f4eee7 100%);
+  background:linear-gradient(180deg,#edf8ef 0%, #dff1e3 100%);
 }
 .page-bg{
   position:fixed; inset:0; pointer-events:none;
