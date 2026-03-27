@@ -1,12 +1,12 @@
 :root{
-  --bg:#f6fbf7;
+  --bg:#dff3e4;
   --card:#ffffff;
-  --text:#41554a;
-  --muted:#6b8a78;
-  --line:#d8eadc;
-  --gold:#d8c29a;
-  --gold-dark:#c9b083;
-  --shadow:0 10px 30px rgba(80,120,95,.10);
+  --text:#264536;
+  --muted:#5f7f6d;
+  --line:#bddcc4;
+  --gold:#d4af37;
+  --gold-dark:#b8962e;
+  --shadow:0 10px 30px rgba(60,120,80,.18);
   --radius:24px;
 }
 *{box-sizing:border-box}
