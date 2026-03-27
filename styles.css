@@ -1,12 +1,12 @@
 :root{
-  --bg:#f7f3ee;
-  --card:#fffdfa;
-  --text:#2f261e;
-  --muted:#7b6b60;
-  --line:#eadfd4;
-  --gold:#b9925a;
-  --gold-dark:#9a7742;
-  --shadow:0 12px 40px rgba(62,39,20,.10);
+  --bg:#f6fbf7;
+  --card:#ffffff;
+  --text:#41554a;
+  --muted:#6b8a78;
+  --line:#d8eadc;
+  --gold:#d8c29a;
+  --gold-dark:#c9b083;
+  --shadow:0 10px 30px rgba(80,120,95,.10);
   --radius:24px;
 }
 *{box-sizing:border-box}
