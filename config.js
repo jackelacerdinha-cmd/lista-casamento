@@ -12,7 +12,7 @@ window.APP_CONFIG = {
   },
   supabase: {
     url: "https://cjhwvhzfdzcegqgvyghf.supabase.co",
-    anonKey: "sb_publishable__mrRsUnvCVR0C7JmznR0hQ_d5APzQEN"
+    anonKey: "sb_publishable__mrRsUnvCVR0C7JmzNr0hQ_d5APzQEN"
   }
 };
 
