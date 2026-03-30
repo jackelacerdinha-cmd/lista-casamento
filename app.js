@@ -122,3 +122,4 @@ function bootstrap() {
   initSupabase();
   attachEvents();
 }
+bootstrap();
