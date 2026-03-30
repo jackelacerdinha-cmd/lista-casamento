@@ -295,6 +295,19 @@ await state.supabase
   .from('rsvps')
   .update({ confirmado: true })
   .eq('id', data[0].id);
+  await emailjs.send(
+  'service_20xzwfp',
+  'rgyssxl',
+  {
+    name: payload.nome || 'Convidado',
+    guest_name: payload.nome || 'Convidado',
+    guest_phone: payload.whatsapp || '-',
+    guest_count: '1',
+    guest_message: payload.mensagem || '-',
+    sent_at: new Date().toLocaleString('pt-BR'),
+    email: 'jacke.lacerdinha@gmail.com'
+  }
+);
 
 // 3. log
 console.log("Confirmação automática realizada");
