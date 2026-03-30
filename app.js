@@ -273,13 +273,28 @@ async function submitRsvp(formData) {
     return;
   }
 
-  const { error } = await state.supabase.from('rsvps').insert(payload);
+  const { data, error } = await state.supabase
+  .from('rsvps')
+  .insert(payload)
+  .select();
   if (error) {
     console.error(error);
     showToast('Não foi possível gravar a confirmação.', true);
     return;
   }
+// AUTOMAÇÃO AQUI
 
+// 1. Marcar como confirmado automaticamente
+
+// 2. salvar no banco
+await state.supabase
+  .from('rsvps')
+  .update({ confirmado: true })
+  .eq('id', data[0].id);
+
+// 3. log
+console.log("Confirmação automática realizada");
+}
   el.rsvpForm.reset();
   await loadRsvps();
 
