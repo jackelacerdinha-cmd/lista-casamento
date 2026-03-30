@@ -11,9 +11,9 @@ window.APP_CONFIG = {
     whatsapp: "5562994636820"
   },
   supabase: {
-    url: "https://cjhwvhzfdzcegqgvyghf.supabase.co",
-    anonKey: "sb_publishable__mrRsUnvCVR0C7JmzNr0hQ_d5APzQEN"
-  }
+  url: 'https://cjhwwhzfdzcgeqgvyghf.supabase.co',
+  anonKey: 'sb_publishable__mrRsUnvCVR0C7JmzNr0hQ_d5APzQEN'
+}
 };
 
 // atualização pix
