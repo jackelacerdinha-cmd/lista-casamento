@@ -144,26 +144,3 @@ function bootstrap() {
 }
 
 bootstrap();
-E confirme que o final do seu index.html está exatamente assim
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./data.js"></script>
-<script src="./config.js"></script>
-<script type="module" src="./app.js"></script>
-E confirme que o seu config.js está assim
-window.APP_CONFIG = {
-  wedding: {
-    couple: "Mariana & Diego",
-    dateLabel: "18/04/2026",
-    timeLabel: "16:30 hrs",
-    pixKey: "62995163186",
-    whatsappShareText: "Olá! Escolha seu presente ou confirme presença no casamento da Mariana e Diego: "
-  },
-  notifications: {
-    email: "jacke.lacerdinha@gmail.com",
-    whatsapp: "5562994636820"
-  },
-  supabase: {
-    url: "https://cjhwvhzfdzcgegqvygfh.supabase.co",
-    anonKey: "sb_publishable__mrRsUnvCVR0C7JmzNr0hQ_d5APzQEN"
-  }
-};
