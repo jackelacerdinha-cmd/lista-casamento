@@ -82,7 +82,7 @@ async function submitRsvp(formData) {
   try {
     await emailjs.send(
       'service_20xzwfp',
-      'rgyssxl',
+      'template_rsvp_mari',
       {
         name: payload.nome || 'Convidado',
         guest_name: payload.nome || 'Convidado',
