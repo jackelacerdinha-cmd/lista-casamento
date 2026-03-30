@@ -117,9 +117,25 @@ await navigator.clipboard.writeText('62995163186');
 showToast('PIX copiado!');
 });
 }
+function setEventTexts() {
+  const { couple, dateLabel, timeLabel, pixKey } = window.APP_CONFIG.wedding;
+
+  el.coupleNames.textContent = couple;
+  el.eventDate.textContent = dateLabel;
+  el.eventTime.textContent = timeLabel;
+  el.eventDateLong.textContent = `18 de abril de 2026 às ${timeLabel}`;
+  el.pixKeyView.textContent = pixKey || '62995163186';
+}
+ function initSupabase() {
+  setEventTexts();
+
+  const { url, anonKey } = window.APP_CONFIG.supabase;
+  state.supabase = window.supabase.createClient(url, anonKey);
+}
 
 function bootstrap() {
   initSupabase();
   attachEvents();
 }
+
 bootstrap();
