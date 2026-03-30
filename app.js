@@ -1,3 +1,7 @@
+import emailjs from 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/+esm';
+emailjs.init({
+  publicKey: 'oZjq5OdIqraX_zf0L'
+});
 const state = {
   items: [...window.WEDDING_ITEMS],
   reservations: [],
