@@ -107,8 +107,14 @@ async function submitRsvp(formData) {
 
   if (emailEnviado) {
     showToast('🎉 Confirmação enviada com sucesso!');
+     confetti({
+    particleCount: 150,
+    spread: 90,
+    origin: { y: 0.6 }
+  });
+    
   } else {
-    showToast('🎉 Confirmação salva no banco com sucesso!');
+    showToast('⚠️ Salvo no banco, mas o e-mail não foi enviado.', true);
   }
 }
 
