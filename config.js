@@ -11,7 +11,7 @@ window.APP_CONFIG = {
     whatsapp: "5562994636820"
   },
   supabase: {
-  url: 'https://cjhwwhzfdzcgeqgvyghf.supabase.co',
+  url: 'https://cjhwwhzfdzcgeqgvygfh.supabase.co',,
   anonKey: 'sb_publishable__mrRsUnvCVR0C7JmzNr0hQ_d5APzQEN'
 }
 };
