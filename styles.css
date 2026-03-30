@@ -37,9 +37,9 @@ body{
   backdrop-filter: blur(8px);
 }
 .eyebrow,.panel-label{letter-spacing:.14em; text-transform:uppercase; color:var(--gold-dark); font-size:.76rem; font-weight:700; margin:0 0 8px}
-h1,h2,h3{font-family:"Cormorant Garamond", serif; margin:0}
-h1{font-size:clamp(3rem,7vw,5.2rem); line-height:.95}
-h1 span{color:var(--gold)}
+.hero h1{
+  color:#6fae8f;
+}
 .subtitle{font-size:1.08rem; color:var(--muted); max-width:650px; margin:14px auto 0}
 .event-meta,.hero-actions,.pix-actions,.filters,.result-actions{display:flex; gap:12px; flex-wrap:wrap}
 .event-meta,.hero-actions{justify-content:center; margin-top:20px}
