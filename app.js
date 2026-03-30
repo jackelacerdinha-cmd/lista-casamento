@@ -49,8 +49,12 @@ const el = {
 
 function showToast(message, isError = false) {
   el.toast.textContent = message;
-  el.toast.classList.remove('hidden');
-  el.toast.style.background = isError ? '#8b2d2d' : '#2f261e';
+  el.toast.classList.remove('hidden', 'success-burst');
+  el.toast.style.background = isError ? '#8b2d2d' : '#3a7d5d';
+  if (!isError) {
+    void el.toast.offsetWidth;
+    el.toast.classList.add('success-burst');
+  }
   setTimeout(() => el.toast.classList.add('hidden'), 3400);
 }
 
