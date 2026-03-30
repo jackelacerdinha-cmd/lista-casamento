@@ -55,55 +55,27 @@ setTimeout(() => el.toast.classList.add('hidden'), 3400);
 }
 
 async function submitRsvp(formData) {
-const payload = {
-nome: formData.get('nome'),
-whatsapp: formData.get('whatsapp') || null,
-resposta: formData.get('resposta'),
-mensagem: formData.get('mensagem') || null,
-};
+ }
 
-if (!state.supabase) {
-showToast('Configuração do Supabase ausente.', true);
-return;
-}
+  el.rsvpForm.reset();
 
-const { data, error } = await state.supabase
-.from('rsvps')
-.insert(payload)
-.select();
-
-if (error) {
-console.error(error);
-showToast('Erro ao salvar confirmação.', true);
-return;
-}
-
-try {
-await emailjs.send(
-  'service_20xzwfp',
-  'rgyssxl',
-  {
-    name: payload.nome || 'Convidado',
-    guest_name: payload.nome || 'Convidado',
-    guest_phone: payload.whatsapp || '-',
-    guest_count: '1',
-    guest_message: payload.mensagem || '-',
-    sent_at: new Date().toLocaleString('pt-BR'),
-    email: 'jacke.lacerdinha@gmail.com'
+  if (emailEnviado) {
+    showToast('Confirmação enviada com sucesso!');
   }
-);
-emailEnviado = true;
-} catch (e) {
-  console.error(e);
-  showToast('Salvo, mas e-mail não enviado.', true);
 }
 
-el.rsvpForm.reset();
+function attachEvents() {
+  el.rsvpForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(el.rsvpForm);
+    await submitRsvp(formData);
+  });
 
-if (emailEnviado) {
-  showToast('Confirmação enviada com sucesso!');
+  el.copyPixBtn.addEventListener('click', async () => {
+    await navigator.clipboard.writeText('62995163186');
+    showToast('PIX copiado!');
+  });
 }
-
 function attachEvents() {
   el.rsvpForm.addEventListener('submit', async (event) => {
     event.preventDefault();
