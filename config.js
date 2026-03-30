@@ -16,3 +16,6 @@ notifications: {
   }
 };
 // update
+}; 
+
+// atualização pix
