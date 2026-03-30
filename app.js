@@ -78,39 +78,44 @@ showToast('Erro ao salvar confirmação.', true);
 return;
 }
 
-await state.supabase
-.from('rsvps')
-.update({ confirmado: true })
-.eq('id', data[0].id);
-
 try {
 await emailjs.send(
-'service_20xzwfp',
-'rgyssxl',
-{
-name: payload.nome || 'Convidado',
-guest_name: payload.nome || 'Convidado',
-guest_phone: payload.whatsapp || '-',
-guest_message: payload.mensagem || '-',
-sent_at: new Date().toLocaleString('pt-BR'),
-email: 'jacke.lacerdinha@gmail.com'
-}
+  'service_20xzwfp',
+  'rgyssxl',
+  {
+    name: payload.nome || 'Convidado',
+    guest_name: payload.nome || 'Convidado',
+    guest_phone: payload.whatsapp || '-',
+    guest_count: '1',
+    guest_message: payload.mensagem || '-',
+    sent_at: new Date().toLocaleString('pt-BR'),
+    email: 'jacke.lacerdinha@gmail.com'
+  }
 );
+emailEnviado = true;
 } catch (e) {
-console.error(e);
-showToast('Salvo, mas e-mail não enviado.', true);
+  console.error(e);
+  showToast('Salvo, mas e-mail não enviado.', true);
 }
 
 el.rsvpForm.reset();
-showToast('Confirmação enviada com sucesso!');
+
+if (emailEnviado) {
+  showToast('Confirmação enviada com sucesso!');
 }
 
 function attachEvents() {
-el.rsvpForm.addEventListener('submit', async (event) => {
-event.preventDefault();
-const formData = new FormData(el.rsvpForm);
-await submitRsvp(formData);
-});
+  el.rsvpForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(el.rsvpForm);
+    await submitRsvp(formData);
+  });
+
+  el.copyPixBtn.addEventListener('click', async () => {
+    await navigator.clipboard.writeText('62995163186');
+    showToast('PIX copiado!');
+  });
+}
 
 el.copyPixBtn.addEventListener('click', async () => {
 await navigator.clipboard.writeText('62995163186');
