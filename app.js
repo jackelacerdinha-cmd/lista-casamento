@@ -119,7 +119,6 @@ showToast('PIX copiado!');
 }
 
 function bootstrap() {
-attachEvents();
+  initSupabase();
+  attachEvents();
 }
-
-bootstrap();
