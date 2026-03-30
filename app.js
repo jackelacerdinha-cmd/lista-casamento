@@ -102,9 +102,9 @@ async function submitRsvp(formData) {
   el.rsvpForm.reset();
 
   if (emailEnviado) {
-    showToast('Confirmação enviada com sucesso!');
+    showToast('🎉 Confirmação enviada com sucesso!');
   } else {
-    showToast('Confirmação salva no banco com sucesso!');
+    showToast('🎉 Confirmação salva no banco com sucesso!');
   }
 }
 
