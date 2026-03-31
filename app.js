@@ -129,58 +129,91 @@ async function submitRsvp(formData) {
 }
 
 function attachEvents() {
-  el.search.addEventListener('input', renderCards);
-  el.categoria.addEventListener('change', renderCards);
-  el.faixa.addEventListener('change', renderCards);
+  if (el.search && typeof renderCards === 'function') {
+    el.search.addEventListener('input', renderCards);
+  }
 
-  el.cards.addEventListener('click', (event) => {
-    const btn = event.target.closest('.reserve-btn');
-    if (!btn) return;
-    openGiftDialog(btn.dataset.id);
-  });
+  if (el.categoria && typeof renderCards === 'function') {
+    el.categoria.addEventListener('change', renderCards);
+  }
 
-  el.closeDialogBtn.addEventListener('click', closeGiftDialog);
-  el.dialog.addEventListener('click', (event) => {
-    if (event.target === el.dialog) closeGiftDialog();
-  });
+  if (el.faixa && typeof renderCards === 'function') {
+    el.faixa.addEventListener('change', renderCards);
+  }
 
-  el.closeResultDialogBtn.addEventListener('click', closeResultDialog);
-  el.closeResultBtn.addEventListener('click', closeResultDialog);
-  el.resultDialog.addEventListener('click', (event) => {
-    if (event.target === el.resultDialog) closeResultDialog();
-  });
+  if (el.cards && typeof openGiftDialog === 'function') {
+    el.cards.addEventListener('click', (event) => {
+      const btn = event.target.closest('.reserve-btn');
+      if (!btn) return;
+      openGiftDialog(btn.dataset.id);
+    });
+  }
 
-  el.giftForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const formData = new FormData(el.giftForm);
-    await reserveGift(formData);
-  });
+  if (el.closeDialogBtn && typeof closeGiftDialog === 'function') {
+    el.closeDialogBtn.addEventListener('click', closeGiftDialog);
+  }
 
-  el.rsvpForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const formData = new FormData(el.rsvpForm);
-    await submitRsvp(formData);
-  });
+  if (el.dialog && typeof closeGiftDialog === 'function') {
+    el.dialog.addEventListener('click', (event) => {
+      if (event.target === el.dialog) closeGiftDialog();
+    });
+  }
 
-  el.cancelForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const formData = new FormData(el.cancelForm);
-    await cancelGift(formData);
-  });
+  if (el.closeResultDialogBtn && typeof closeResultDialog === 'function') {
+    el.closeResultDialogBtn.addEventListener('click', closeResultDialog);
+  }
 
-  el.copyPixBtn.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(window.APP_CONFIG.wedding.pixKey || '');
-      showToast('Chave PIX copiada.');
-    } catch (_e) {
-      showToast('Não foi possível copiar a chave PIX.', true);
-    }
-  });
+  if (el.closeResultBtn && typeof closeResultDialog === 'function') {
+    el.closeResultBtn.addEventListener('click', closeResultDialog);
+  }
 
-  el.shareBtn.addEventListener('click', () => {
-    const text = `${window.APP_CONFIG.wedding.whatsappShareText}${window.location.href}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-  });
+  if (el.resultDialog && typeof closeResultDialog === 'function') {
+    el.resultDialog.addEventListener('click', (event) => {
+      if (event.target === el.resultDialog) closeResultDialog();
+    });
+  }
+
+  if (el.giftForm && typeof reserveGift === 'function') {
+    el.giftForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(el.giftForm);
+      await reserveGift(formData);
+    });
+  }
+
+  if (el.rsvpForm) {
+    el.rsvpForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(el.rsvpForm);
+      await submitRsvp(formData);
+    });
+  }
+
+  if (el.cancelForm && typeof cancelGift === 'function') {
+    el.cancelForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(el.cancelForm);
+      await cancelGift(formData);
+    });
+  }
+
+  if (el.copyPixBtn) {
+    el.copyPixBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(window.APP_CONFIG?.wedding?.pixKey || '');
+        showToast('Chave PIX copiada.');
+      } catch (_e) {
+        showToast('Não foi possível copiar a chave PIX.', true);
+      }
+    });
+  }
+
+  if (el.shareBtn) {
+    el.shareBtn.addEventListener('click', () => {
+      const text = `${window.APP_CONFIG?.wedding?.whatsappShareText || ''}${window.location.href}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    });
+  }
 }
 
 function setEventTexts() {
