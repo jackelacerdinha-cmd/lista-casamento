@@ -103,7 +103,6 @@ async function submitRsvp(formData) {
   }
 
   el.rsvpForm.reset();
-  await loadRsvps();
 
   if (emailEnviado) {
     showToast('🎉 Confirmação enviada com sucesso!');
@@ -119,13 +118,19 @@ async function submitRsvp(formData) {
     showToast('⚠️ Salvo no banco, mas o e-mail não foi enviado.', true);
   }
 
+  if (typeof loadRsvps === 'function') {
+    await loadRsvps();
+  }
+
   const eventText = `Nova confirmação no site do casamento.%0A%0ANome: ${payload.nome}%0AWhatsApp: ${payload.whatsapp || '-'}%0AResposta: ${payload.resposta}%0AMensagem: ${payload.mensagem || '-'}`;
 
-   showResult({
-    title: 'Presença confirmada',
-    message: 'Sua resposta foi gravada com sucesso.',
-    eventText
-  });
+  if (typeof showResult === 'function') {
+    showResult({
+      title: 'Presença confirmada',
+      message: 'Sua resposta foi gravada com sucesso.',
+      eventText
+    });
+  }
 }
 
 function attachEvents() {
