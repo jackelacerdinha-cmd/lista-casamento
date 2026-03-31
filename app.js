@@ -201,11 +201,12 @@ function initSupabase() {
 }
 
 function bootstrap() {
-  fillFilters();
-  attachEvents();
-  updateKPIs();
-  renderCards();
   initSupabase();
+  attachEvents();
+
+  if (typeof fillFilters === 'function') fillFilters();
+  if (typeof updateKPIs === 'function') updateKPIs();
+  if (typeof renderCards === 'function') renderCards();
 }
 
 bootstrap();
