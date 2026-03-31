@@ -67,7 +67,7 @@ async function submitRsvp(formData) {
   };
 
   if (!state.supabase) {
-    showToast('Configuração do Supabase ausente.', true);
+    showToast('A confirmação não será salva enquanto o config.js estiver sem as credenciais do Supabase.', true);
     return;
   }
 
@@ -76,8 +76,8 @@ async function submitRsvp(formData) {
     .insert(payload);
 
   if (error) {
-    console.error('ERRO SUPABASE:', error);
-    showToast('Erro ao salvar confirmação.', true);
+    console.error(error);
+    showToast('Não foi possível gravar a confirmação.', true);
     return;
   }
 
@@ -100,34 +100,86 @@ async function submitRsvp(formData) {
     emailEnviado = true;
   } catch (e) {
     console.error('ERRO EMAILJS:', e);
-    showToast('Salvo no banco, mas o e-mail não foi enviado.', true);
   }
 
   el.rsvpForm.reset();
+  await loadRsvps();
 
   if (emailEnviado) {
     showToast('🎉 Confirmação enviada com sucesso!');
-     confetti({
-    particleCount: 150,
-    spread: 90,
-    origin: { y: 0.6 }
-  });
-    
+
+    if (typeof confetti === 'function') {
+      confetti({
+        particleCount: 150,
+        spread: 90,
+        origin: { y: 0.6 }
+      });
+    }
   } else {
     showToast('⚠️ Salvo no banco, mas o e-mail não foi enviado.', true);
   }
+
+  const eventText = `Nova confirmação no site do casamento.%0A%0ANome: ${payload.nome}%0AWhatsApp: ${payload.whatsapp || '-'}%0AResposta: ${payload.resposta}%0AMensagem: ${payload.mensagem || '-'}`;
+
+   showResult({
+    title: 'Presença confirmada',
+    message: 'Sua resposta foi gravada com sucesso.',
+    eventText
+  });
 }
 
 function attachEvents() {
+  el.search.addEventListener('input', renderCards);
+  el.categoria.addEventListener('change', renderCards);
+  el.faixa.addEventListener('change', renderCards);
+
+  el.cards.addEventListener('click', (event) => {
+    const btn = event.target.closest('.reserve-btn');
+    if (!btn) return;
+    openGiftDialog(btn.dataset.id);
+  });
+
+  el.closeDialogBtn.addEventListener('click', closeGiftDialog);
+  el.dialog.addEventListener('click', (event) => {
+    if (event.target === el.dialog) closeGiftDialog();
+  });
+
+  el.closeResultDialogBtn.addEventListener('click', closeResultDialog);
+  el.closeResultBtn.addEventListener('click', closeResultDialog);
+  el.resultDialog.addEventListener('click', (event) => {
+    if (event.target === el.resultDialog) closeResultDialog();
+  });
+
+  el.giftForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(el.giftForm);
+    await reserveGift(formData);
+  });
+
   el.rsvpForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const formData = new FormData(el.rsvpForm);
     await submitRsvp(formData);
   });
 
+  el.cancelForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(el.cancelForm);
+    await cancelGift(formData);
+  });
+
   el.copyPixBtn.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(window.APP_CONFIG.wedding.pixKey || '62995163186');
-    showToast('PIX copiado!');
+    try {
+      await navigator.clipboard.writeText(window.APP_CONFIG.wedding.pixKey || '');
+      showToast('Chave PIX copiada.');
+    } catch (_e) {
+      showToast('Não foi possível copiar a chave PIX.', true);
+    }
+  });
+
+  el.shareBtn.addEventListener('click', () => {
+    const text = `${window.APP_CONFIG.wedding.whatsappShareText}${window.location.href}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   });
 }
 
@@ -149,8 +201,11 @@ function initSupabase() {
 }
 
 function bootstrap() {
-  initSupabase();
+  fillFilters();
   attachEvents();
+  updateKPIs();
+  renderCards();
+  initSupabase();
 }
 
 bootstrap();
