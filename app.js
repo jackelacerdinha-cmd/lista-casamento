@@ -485,7 +485,7 @@ async function submitRsvp(formData) {
     guest_message: payload.mensagem || '-',
     response: payload.resposta,
     sent_at: new Date().toLocaleString('pt-BR'),
-    email: getNotificationsConfig().email || 'jacke.lacerdinha@gmail.com'
+    email: getNotificationsConfig().email || 'mari.pxto11@gmail.com'
   });
 
   el.rsvpForm?.reset();
@@ -591,7 +591,7 @@ async function submitGiftReservation(formData) {
     guest_count: '1',
     guest_message: `Presente escolhido: ${itemNome}${observacao ? ` | Observação: ${observacao}` : ''}`,
     sent_at: new Date().toLocaleString('pt-BR'),
-    email: getNotificationsConfig().email || 'jacke.lacerdinha@gmail.com'
+    email: getNotificationsConfig().email || 'mari.pxto11@gmail.com'
   });
 
   const eventText = [
