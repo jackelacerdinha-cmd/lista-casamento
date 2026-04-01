@@ -7,7 +7,7 @@ window.APP_CONFIG = {
     whatsappShareText: "Olá! Escolha seu presente ou confirme presença no casamento da Mariana e Diego: "
   },
   notifications: {
-    email: "jacke.lacerdinha@gmail.com",
+    email: "mari.pxto11@gmail.com",
     whatsapp: "5562994636820"
   },
   supabase: {
