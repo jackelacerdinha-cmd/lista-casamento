@@ -1014,7 +1014,7 @@ window.WEDDING_ITEMS = [
     "categoria": "Utilitários de Casa",
     "preco": 40.0,
     "faixa": "Até R$50",
-    "status": "Disponível"
+    "status": "Disponível",
     "imagem": "https://m.media-amazon.com/images/I/51rDh+pCJIL._AC_SX679_.jpg",
     "link": "https://www.amazon.com.br/Forma-Para-Redondo-Antiaderente-Preta/dp/B0FQCPCQ8D/ref=sr_1_48?__mk_pt_BR=%C3%85M%C3%85%C5%BD%C3%95%C3%91&crid=2HFGGGPXHNWPI&dib=eyJ2IjoiMSJ9.vx2ZorvgHeaE6kFny4jwlRfog_gqbv0v21pdc1QH_usIUbl0gM5Hv6KeB7OCCmPMVGe5A1BUTSzF4L6Qn8XqPYIaG8YSvMuPYk1IF3pyoe7T5hvs8jc32AN18ctnkvPsh_aC901yC4xs5YO8Xc96797g6XitaVfVUipPyxGn0EgT40aW3MoYxpP6K-XOMVGKu9jV1buMxHeuqqfVlSDpLfg4SSS21vlGHw1lroO7A8ejsFe30YudO18KJoVyL3E4Aj6Bx1MeREvaOVET_MRGixxqFsHUBpj6rUI6u8MInVo.i2iyH8ljYkuvZrYzjqzWKB2QEj3GzrUJFE5UgBTDOak&dib_tag=se&keywords=forma+de+bolo&qid=1773891970&sprefix=forma+de+bolo%2Caps%2C212&sr=8-48"
   },
