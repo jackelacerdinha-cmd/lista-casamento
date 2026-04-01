@@ -4,9 +4,17 @@ emailjs.init({
   publicKey: 'oZjq5OdIqraX_zf0L'
 });
 
+const STORAGE_KEYS = {
+  reservations: 'wedding_reservations_v3',
+  rsvps: 'wedding_rsvps_v3'
+};
+
 const state = {
-  items: Array.isArray(window.WEDDING_ITEMS) ? [...window.WEDDING_ITEMS] : [],
+  items: normalizeItems(Array.isArray(window.WEDDING_ITEMS) ? window.WEDDING_ITEMS : []),
   supabase: null,
+  reservations: [],
+  rsvpsCount: 0,
+  activeItem: null
 };
 
 const el = {
@@ -22,11 +30,17 @@ const el = {
   pixKeyView: document.getElementById('pixKeyView'),
   copyPixBtn: document.getElementById('copyPixBtn'),
   rsvpForm: document.getElementById('rsvpForm'),
+  cancelForm: document.getElementById('cancelForm'),
   shareBtn: document.getElementById('shareBtn'),
   coupleNames: document.getElementById('coupleNames'),
   eventDate: document.getElementById('eventDate'),
   eventTime: document.getElementById('eventTime'),
   eventDateLong: document.getElementById('eventDateLong'),
+  configBanner: document.getElementById('configBanner'),
+  giftDialog: document.getElementById('giftDialog'),
+  giftForm: document.getElementById('giftForm'),
+  giftDialogTitle: document.getElementById('giftDialogTitle'),
+  closeDialogBtn: document.getElementById('closeDialogBtn'),
   resultDialog: document.getElementById('resultDialog'),
   resultTitle: document.getElementById('resultTitle'),
   resultMessage: document.getElementById('resultMessage'),
@@ -34,45 +48,114 @@ const el = {
   closeResultBtn: document.getElementById('closeResultBtn'),
   notifyWhatsappLink: document.getElementById('notifyWhatsappLink'),
   notifyEmailLink: document.getElementById('notifyEmailLink'),
+  cancelCodeWrap: document.getElementById('cancelCodeWrap'),
+  cancelCodeView: document.getElementById('cancelCodeView')
 };
+
+function normalizeItems(items) {
+  return items.map((item, index) => {
+    const nome = String(item.item || item.nome || `Item ${index + 1}`).trim();
+    let link = String(item.link || '').trim();
+    if (link && !/^https?:\/\//i.test(link)) link = `https://${link.replace(/^\/+/, '')}`;
+
+    return {
+      id: String(item.id || `item-${index + 1}`),
+      item: nome,
+      nome,
+      categoria: String(item.categoria || 'Outros').trim(),
+      preco: Number(item.preco || 0),
+      faixa: String(item.faixa || '').trim(),
+      status: String(item.status || 'Disponível').trim(),
+      imagem: String(item.imagem || '').trim(),
+      link
+    };
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function getNotificationsConfig() {
+  return {
+    email: window.APP_CONFIG?.notifications?.email || '',
+    whatsapp: window.APP_CONFIG?.notifications?.whatsapp || ''
+  };
+}
+
+function loadLocalReservations() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.reservations);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalReservations() {
+  localStorage.setItem(STORAGE_KEYS.reservations, JSON.stringify(state.reservations));
+}
+
+function loadLocalRsvps() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.rsvps);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalRsvp(payload) {
+  const all = loadLocalRsvps();
+  all.push(payload);
+  localStorage.setItem(STORAGE_KEYS.rsvps, JSON.stringify(all));
+  state.rsvpsCount = all.length;
+}
+
+function syncItemsWithReservations() {
+  const reservedIds = new Set(
+    state.reservations
+      .filter((reservation) => reservation && reservation.status !== 'cancelled')
+      .map((reservation) => String(reservation.item_id))
+  );
+
+  state.items = state.items.map((item) => ({
+    ...item,
+    status: reservedIds.has(String(item.id)) ? 'Escolhido' : 'Disponível'
+  }));
+}
 
 function showToast(message, isError = false) {
   if (!el.toast) return;
   el.toast.textContent = message;
-  el.toast.classList.remove('hidden', 'success-burst');
   el.toast.style.background = isError ? '#8b2d2d' : '#3a7d5d';
-
+  el.toast.classList.remove('hidden', 'success-burst');
   if (!isError) {
     void el.toast.offsetWidth;
     el.toast.classList.add('success-burst');
   }
-
-  setTimeout(() => {
+  window.clearTimeout(showToast._timer);
+  showToast._timer = window.setTimeout(() => {
     el.toast.classList.add('hidden');
-  }, 3400);
+  }, 3500);
 }
 
-function showResult({ title, message, eventText = '' }) {
-  if (!el.resultDialog || !el.resultTitle || !el.resultMessage) return;
-
-  el.resultTitle.textContent = title;
-  el.resultMessage.textContent = message;
-  el.resultDialog.classList.remove('hidden');
-
-  if (el.notifyWhatsappLink) {
-    el.notifyWhatsappLink.href = https://wa.me/?text=${eventText};
-  }
-
-  if (el.notifyEmailLink) {
-    const subject = encodeURIComponent(title || 'Atualização do site');
-    const body = eventText.replace(/%0A/g, '\n');
-    el.notifyEmailLink.href = mailto:?subject=${subject}&body=${encodeURIComponent(body)};
-  }
+function showConfigBanner(message) {
+  if (!el.configBanner) return;
+  el.configBanner.textContent = message;
+  el.configBanner.classList.remove('hidden');
 }
 
-function closeResultDialog() {
-  if (!el.resultDialog) return;
-  el.resultDialog.classList.add('hidden');
+function hideConfigBanner() {
+  if (!el.configBanner) return;
+  el.configBanner.classList.add('hidden');
 }
 
 function setEventTexts() {
@@ -85,22 +168,100 @@ function setEventTexts() {
   if (el.coupleNames) el.coupleNames.textContent = couple;
   if (el.eventDate) el.eventDate.textContent = dateLabel;
   if (el.eventTime) el.eventTime.textContent = timeLabel;
-  if (el.eventDateLong) el.eventDateLong.textContent = 18 de abril de 2026 às ${timeLabel};
-  if (el.pixKeyView) el.pixKeyView.textContent = pixKey;
+  if (el.eventDateLong) el.eventDateLong.textContent = `${dateLabel} às ${timeLabel}`;
+  if (el.pixKeyView) el.pixKeyView.textContent = pixKey || 'Chave PIX não configurada';
 }
 
-function initSupabase() {
-  setEventTexts();
+function showResult({ title, message, cancelCode = '', eventText = '' }) {
+  if (!el.resultDialog || !el.resultTitle || !el.resultMessage) return;
 
-  const url = window.APP_CONFIG?.supabase?.url;
-  const anonKey = window.APP_CONFIG?.supabase?.anonKey;
+  el.resultTitle.textContent = title;
+  el.resultMessage.textContent = message;
 
-  if (!url || !anonKey || !window.supabase?.createClient) {
-    console.error('Supabase ausente ou inválido.');
+  if (el.cancelCodeWrap && el.cancelCodeView) {
+    if (cancelCode) {
+      el.cancelCodeView.textContent = cancelCode;
+      el.cancelCodeWrap.classList.remove('hidden');
+    } else {
+      el.cancelCodeView.textContent = '';
+      el.cancelCodeWrap.classList.add('hidden');
+    }
+  }
+
+  const notifications = getNotificationsConfig();
+
+  if (el.notifyWhatsappLink) {
+    if (notifications.whatsapp) {
+      el.notifyWhatsappLink.href = `https://wa.me/${notifications.whatsapp}?text=${encodeURIComponent(eventText)}`;
+    } else {
+      el.notifyWhatsappLink.href = `https://wa.me/?text=${encodeURIComponent(eventText)}`;
+    }
+    el.notifyWhatsappLink.classList.remove('hidden');
+  }
+
+  if (el.notifyEmailLink) {
+    const subject = encodeURIComponent(title || 'Atualização do site');
+    const body = encodeURIComponent(eventText || message || '');
+    if (notifications.email) {
+      el.notifyEmailLink.href = `mailto:${notifications.email}?subject=${subject}&body=${body}`;
+    } else {
+      el.notifyEmailLink.href = `mailto:?subject=${subject}&body=${body}`;
+    }
+    el.notifyEmailLink.classList.remove('hidden');
+  }
+
+  if (typeof el.resultDialog.showModal === 'function') {
+    el.resultDialog.showModal();
+  } else {
+    el.resultDialog.classList.remove('hidden');
+  }
+}
+
+function closeResultDialog() {
+  if (!el.resultDialog) return;
+  if (typeof el.resultDialog.close === 'function') {
+    el.resultDialog.close();
+  } else {
+    el.resultDialog.classList.add('hidden');
+  }
+}
+
+function openGiftDialog(itemId) {
+  const item = state.items.find((entry) => String(entry.id) === String(itemId));
+  if (!item || String(item.status).toLowerCase() === 'escolhido') {
+    showToast('Esse presente já foi escolhido.', true);
     return;
   }
 
-  state.supabase = window.supabase.createClient(url, anonKey);
+  state.activeItem = item;
+
+  if (el.giftDialogTitle) el.giftDialogTitle.textContent = item.item || item.nome || 'Presente';
+
+  if (el.giftForm) {
+    el.giftForm.reset();
+    const itemIdInput = el.giftForm.querySelector('input[name="item_id"]');
+    const itemNameInput = el.giftForm.querySelector('input[name="item_nome"]');
+    if (itemIdInput) itemIdInput.value = item.id;
+    if (itemNameInput) itemNameInput.value = item.item || item.nome || '';
+  }
+
+  if (el.giftDialog && typeof el.giftDialog.showModal === 'function') {
+    el.giftDialog.showModal();
+  }
+}
+
+function closeGiftDialog() {
+  if (!el.giftDialog) return;
+  if (typeof el.giftDialog.close === 'function') {
+    el.giftDialog.close();
+  } else {
+    el.giftDialog.classList.add('hidden');
+  }
+}
+
+function generateCancelCode(itemId) {
+  const randomPart = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `${String(itemId).replace(/[^A-Za-z0-9]/g, '').toUpperCase()}-${randomPart}`;
 }
 
 function getFilteredItems() {
@@ -114,40 +275,38 @@ function getFilteredItems() {
     const faixaItem = String(item.faixa || '');
 
     const matchSearch = !search || nome.includes(search);
-    const matchCategoria = !categoria || categoria === 'Todas' || cat === categoria;
-    const matchFaixa = !faixa || faixa === 'Todas' || faixaItem === faixa;
+    const matchCategoria = !categoria || cat === categoria;
+    const matchFaixa = !faixa || faixaItem === faixa;
 
     return matchSearch && matchCategoria && matchFaixa;
   });
 }
 
 function updateKPIs() {
-  if (!Array.isArray(state.items)) return;
-
-  const disponiveis = state.items.filter(i => String(i.status || '').toLowerCase() !== 'escolhido').length;
-  const escolhidos = state.items.filter(i => String(i.status || '').toLowerCase() === 'escolhido').length;
+  const disponiveis = state.items.filter((item) => String(item.status).toLowerCase() !== 'escolhido').length;
+  const escolhidos = state.items.filter((item) => String(item.status).toLowerCase() === 'escolhido').length;
 
   if (el.kpiDisponiveis) el.kpiDisponiveis.textContent = String(disponiveis);
   if (el.kpiEscolhidos) el.kpiEscolhidos.textContent = String(escolhidos);
-  if (el.kpiConfirmados) el.kpiConfirmados.textContent = '—';
+  if (el.kpiConfirmados) el.kpiConfirmados.textContent = String(state.rsvpsCount || 0);
 }
 
 function fillFilters() {
   if (!el.categoria || !el.faixa) return;
 
-  const categorias = [...new Set(state.items.map(i => i.categoria).filter(Boolean))];
-  const faixas = [...new Set(state.items.map(i => i.faixa).filter(Boolean))];
+  const categorias = [...new Set(state.items.map((item) => item.categoria).filter(Boolean))].sort();
+  const faixas = [...new Set(state.items.map((item) => item.faixa).filter(Boolean))];
 
-  el.categoria.innerHTML = '<option value="">Todas</option>';
-  categorias.forEach(cat => {
+  el.categoria.innerHTML = '<option value="">Todas as categorias</option>';
+  categorias.forEach((cat) => {
     const option = document.createElement('option');
     option.value = cat;
     option.textContent = cat;
     el.categoria.appendChild(option);
   });
 
-  el.faixa.innerHTML = '<option value="">Todas</option>';
-  faixas.forEach(faixa => {
+  el.faixa.innerHTML = '<option value="">Todas as faixas</option>';
+  faixas.forEach((faixa) => {
     const option = document.createElement('option');
     option.value = faixa;
     option.textContent = faixa;
@@ -162,11 +321,11 @@ function renderCards() {
   el.cards.innerHTML = '';
 
   if (!items.length) {
-    if (el.empty) el.empty.classList.remove('hidden');
+    el.empty?.classList.remove('hidden');
     return;
   }
 
-  if (el.empty) el.empty.classList.add('hidden');
+  el.empty?.classList.add('hidden');
 
   items.forEach((item) => {
     const nome = item.item || item.nome || 'Presente';
@@ -175,179 +334,425 @@ function renderCards() {
       currency: 'BRL'
     });
     const imagem = item.imagem || '';
-    const status = item.status || 'Disponível';
+    const status = String(item.status || 'Disponível');
     const link = item.link || '#';
+    const reservado = status.toLowerCase() === 'escolhido';
 
     const article = document.createElement('article');
-    article.className = 'gift-card';
-
+    article.className = 'card';
     article.innerHTML = `
-      <div class="gift-card__media">
+      <div style="aspect-ratio: 1 / 1; background: #f7f7f7; display:flex; align-items:center; justify-content:center; overflow:hidden;">
         ${imagem
-          ? <img src="${imagem}" alt="${nome}" class="gift-card__image" onerror="this.style.display='none'">
-          : <div class="gift-card__placeholder">Sem imagem</div>
+          ? `<img src="${escapeHtml(imagem)}" alt="${escapeHtml(nome)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.outerHTML='<div style=&quot;padding:16px;color:#7fa08e;text-align:center;&quot;>Imagem indisponível</div>';">`
+          : `<div style="padding:16px;color:#7fa08e;text-align:center;">Sem imagem</div>`
         }
       </div>
-      <div class="gift-card__content">
-        <div class="gift-card__top">
-          <span class="gift-card__category">${item.categoria || ''}</span>
-          <span class="gift-card__status">${status}</span>
+      <div class="card-body">
+        <div class="badges">
+          <span class="badge">${escapeHtml(item.categoria || 'Outros')}</span>
+          <span class="badge ${reservado ? 'status-off' : ''}">${escapeHtml(status)}</span>
         </div>
-        <h3 class="gift-card__title">${nome}</h3>
-        <p class="gift-card__price">${preco}</p>
-        <p class="gift-card__range">${item.faixa || ''}</p>
-        <div class="gift-card__actions">
-          <a href="${link}" target="blank" rel="noopener noreferrer" class="gift-card_link">
-            Ver produto
-          </a>
+        <h3>${escapeHtml(nome)}</h3>
+        <p>${preco}</p>
+        <p>${escapeHtml(item.faixa || '')}</p>
+        <div class="card-footer">
+          <a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer" class="link-btn">Ver produto</a>
+          <button class="btn ${reservado ? 'btn-secondary' : 'btn-primary'} reserve-btn" type="button" data-item-id="${escapeHtml(item.id)}" ${reservado ? 'disabled' : ''}>
+            ${reservado ? 'Já escolhido' : 'Escolher presente'}
+          </button>
         </div>
       </div>
     `;
 
     el.cards.appendChild(article);
   });
+
+  el.cards.querySelectorAll('.reserve-btn').forEach((button) => {
+    button.addEventListener('click', () => openGiftDialog(button.dataset.itemId));
+  });
+}
+
+async function initSupabase() {
+  setEventTexts();
+
+  const url = window.APP_CONFIG?.supabase?.url;
+  const anonKey = window.APP_CONFIG?.supabase?.anonKey;
+
+  if (!url || !anonKey || !window.supabase?.createClient) {
+    showConfigBanner('Supabase não configurado. O site continuará funcionando com armazenamento local neste navegador.');
+    return;
+  }
+
+  state.supabase = window.supabase.createClient(url, anonKey);
+  hideConfigBanner();
+}
+
+async function loadReservations() {
+  state.reservations = loadLocalReservations();
+
+  if (!state.supabase) {
+    syncItemsWithReservations();
+    return;
+  }
+
+  try {
+    const { data, error } = await state.supabase
+      .from('gift_reservations')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (Array.isArray(data) && data.length) {
+      const latestByItem = new Map();
+      for (const row of data) {
+        const key = String(row.item_id || '');
+        if (!latestByItem.has(key)) latestByItem.set(key, row);
+      }
+      state.reservations = [...latestByItem.values()];
+      saveLocalReservations();
+    }
+
+    syncItemsWithReservations();
+  } catch (error) {
+    console.error('Erro ao carregar reservas:', error);
+    syncItemsWithReservations();
+    showConfigBanner('As reservas estão funcionando localmente neste navegador. Para sincronizar para todos, confira a tabela gift_reservations no Supabase.');
+  }
 }
 
 async function loadRsvps() {
+  state.rsvpsCount = loadLocalRsvps().length;
+
   if (!state.supabase) return;
+
   try {
-    const { count } = await state.supabase
+    const { count, error } = await state.supabase
       .from('rsvps')
       .select('*', { count: 'exact', head: true });
 
-    if (el.kpiConfirmados) {
-      el.kpiConfirmados.textContent = String(count ?? '0');
-    }
+    if (error) throw error;
+
+    state.rsvpsCount = Number(count || 0);
   } catch (error) {
-    console.error('Erro ao carregar RSVPs:', error);
+    console.error('Erro ao carregar confirmações:', error);
+  }
+}
+
+async function sendNotificationEmail(templateParams) {
+  try {
+    await emailjs.send('service_20xzwfp', 'template_h8i4bvu', templateParams);
+    return true;
+  } catch (error) {
+    console.error('ERRO EMAILJS:', error);
+    return false;
   }
 }
 
 async function submitRsvp(formData) {
   const payload = {
-    nome: formData.get('nome'),
-    whatsapp: formData.get('whatsapp') || null,
-    resposta: formData.get('resposta'),
-    mensagem: formData.get('mensagem') || null,
+    nome: String(formData.get('nome') || '').trim(),
+    whatsapp: String(formData.get('whatsapp') || '').trim() || null,
+    resposta: String(formData.get('resposta') || '').trim(),
+    mensagem: String(formData.get('mensagem') || '').trim() || null,
+    created_at: new Date().toISOString()
   };
 
-  if (!state.supabase) {
-    showToast('Configuração do Supabase ausente.', true);
+  if (!payload.nome || !payload.resposta) {
+    showToast('Preencha nome e resposta.', true);
     return;
   }
 
-  const { error } = await state.supabase
-    .from('rsvps')
-    .insert(payload);
+  let savedInSupabase = false;
 
-  if (error) {
-    console.error('ERRO SUPABASE:', error);
-    showToast('Não foi possível gravar a confirmação.', true);
-    return;
+  if (state.supabase) {
+    try {
+      const { error } = await state.supabase.from('rsvps').insert(payload);
+      if (error) throw error;
+      savedInSupabase = true;
+    } catch (error) {
+      console.error('ERRO SUPABASE RSVP:', error);
+    }
   }
 
-  let emailEnviado = false;
+  saveLocalRsvp(payload);
 
-  try {
-    await emailjs.send(
-      'service_20xzwfp',
-      'template_h8i4bvu',
-      {
-        name: payload.nome || 'Convidado',
-        guest_name: payload.nome || 'Convidado',
-        guest_phone: payload.whatsapp || '-',
-        guest_count: '1',
-        guest_message: payload.mensagem || '-',
-        sent_at: new Date().toLocaleString('pt-BR'),
-        email: 'jacke.lacerdinha@gmail.com'
-      }
-    );
-    emailEnviado = true;
-  } catch (e) {
-    console.error('ERRO EMAILJS:', e);
-  }
+  const emailEnviado = await sendNotificationEmail({
+    name: payload.nome,
+    guest_name: payload.nome,
+    guest_phone: payload.whatsapp || '-',
+    guest_count: '1',
+    guest_message: payload.mensagem || '-',
+    response: payload.resposta,
+    sent_at: new Date().toLocaleString('pt-BR'),
+    email: getNotificationsConfig().email || 'jacke.lacerdinha@gmail.com'
+  });
 
-  if (el.rsvpForm) el.rsvpForm.reset();
-
-  showToast('🎉 Confirmação enviada com sucesso!');
-
-  if (typeof confetti === 'function') {
-    confetti({
-      particleCount: 150,
-      spread: 90,
-      origin: { y: 0.6 }
-    });
-  }
-
-  if (!emailEnviado) {
-    showToast('⚠️ Presença salva, mas o e-mail não foi enviado.', true);
-  }
-
+  el.rsvpForm?.reset();
   await loadRsvps();
+  updateKPIs();
 
-  const eventText = Nova confirmação no site do casamento.%0A%0ANome: ${payload.nome}%0AWhatsApp: ${payload.whatsapp || '-'}%0AResposta: ${payload.resposta}%0AMensagem: ${payload.mensagem || '-'};
+  if (typeof confetti === 'function' && payload.resposta === 'sim') {
+    confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+  }
+
+  const eventText = [
+    'Nova confirmação no site do casamento.',
+    '',
+    `Nome: ${payload.nome}`,
+    `WhatsApp: ${payload.whatsapp || '-'}`,
+    `Resposta: ${payload.resposta}`,
+    `Mensagem: ${payload.mensagem || '-'}`
+  ].join('\n');
 
   showResult({
     title: 'Presença confirmada',
-    message: 'Sua resposta foi gravada com sucesso.',
+    message: savedInSupabase
+      ? 'Sua resposta foi gravada com sucesso.'
+      : 'Sua resposta foi gravada. Se o Supabase estiver indisponível, ela ficou salva localmente neste navegador.',
     eventText
   });
+
+  if (!emailEnviado) {
+    showToast('Presença salva, mas o e-mail não disparou.', true);
+  } else {
+    showToast('Confirmação enviada com sucesso.');
+  }
+}
+
+async function submitGiftReservation(formData) {
+  const itemId = String(formData.get('item_id') || '').trim();
+  const itemNome = String(formData.get('item_nome') || '').trim();
+  const convidado = String(formData.get('convidado') || '').trim();
+  const whatsapp = String(formData.get('whatsapp') || '').trim();
+  const observacao = String(formData.get('observacao') || '').trim();
+  const confirmarPresenca = String(formData.get('confirmacao_presenca') || '').trim();
+
+  if (!itemId || !convidado) {
+    showToast('Preencha seu nome para reservar o presente.', true);
+    return;
+  }
+
+  const existingActive = state.reservations.find((reservation) => String(reservation.item_id) === itemId && reservation.status !== 'cancelled');
+  if (existingActive) {
+    showToast('Esse presente já foi reservado.', true);
+    closeGiftDialog();
+    await loadReservations();
+    renderCards();
+    updateKPIs();
+    return;
+  }
+
+  const cancelCode = generateCancelCode(itemId);
+  const payload = {
+    item_id: itemId,
+    item_nome: itemNome,
+    convidado,
+    whatsapp: whatsapp || null,
+    observacao: observacao || null,
+    confirmacao_presenca: confirmarPresenca || null,
+    cancel_code: cancelCode,
+    status: 'reserved',
+    created_at: new Date().toISOString()
+  };
+
+  let savedInSupabase = false;
+
+  if (state.supabase) {
+    try {
+      const { error } = await state.supabase.from('gift_reservations').insert(payload);
+      if (error) throw error;
+      savedInSupabase = true;
+    } catch (error) {
+      console.error('ERRO SUPABASE RESERVA:', error);
+    }
+  }
+
+  state.reservations.unshift(payload);
+  saveLocalReservations();
+  syncItemsWithReservations();
+  renderCards();
+  updateKPIs();
+  closeGiftDialog();
+
+  if (confirmarPresenca === 'sim' && el.rsvpForm) {
+    const fd = new FormData();
+    fd.set('nome', convidado);
+    fd.set('whatsapp', whatsapp);
+    fd.set('resposta', 'sim');
+    fd.set('mensagem', observacao);
+    await submitRsvp(fd);
+  }
+
+  const emailEnviado = await sendNotificationEmail({
+    name: convidado,
+    guest_name: convidado,
+    guest_phone: whatsapp || '-',
+    guest_count: '1',
+    guest_message: `Presente escolhido: ${itemNome}${observacao ? ` | Observação: ${observacao}` : ''}`,
+    sent_at: new Date().toLocaleString('pt-BR'),
+    email: getNotificationsConfig().email || 'jacke.lacerdinha@gmail.com'
+  });
+
+  const eventText = [
+    'Novo presente reservado no site do casamento.',
+    '',
+    `Item: ${itemNome}`,
+    `Convidado: ${convidado}`,
+    `WhatsApp: ${whatsapp || '-'}`,
+    `Código de cancelamento: ${cancelCode}`,
+    `Observação: ${observacao || '-'}`
+  ].join('\n');
+
+  showResult({
+    title: 'Presente reservado',
+    message: savedInSupabase
+      ? 'Reserva concluída com sucesso.'
+      : 'Reserva concluída. Se o Supabase estiver indisponível, ela ficou salva localmente neste navegador.',
+    cancelCode,
+    eventText
+  });
+
+  if (typeof confetti === 'function') {
+    confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+  }
+
+  if (!emailEnviado) {
+    showToast('Reserva salva, mas o e-mail não disparou.', true);
+  } else {
+    showToast('Presente reservado com sucesso.');
+  }
+}
+
+async function cancelGiftReservation(formData) {
+  const cancelCode = String(formData.get('cancel_code') || '').trim().toUpperCase();
+  const cancelledBy = String(formData.get('cancelled_by') || '').trim();
+  const note = String(formData.get('note') || '').trim();
+
+  if (!cancelCode) {
+    showToast('Informe o código de cancelamento.', true);
+    return;
+  }
+
+  const reservation = state.reservations.find(
+    (entry) => String(entry.cancel_code || '').toUpperCase() === cancelCode && entry.status !== 'cancelled'
+  );
+
+  if (!reservation) {
+    showToast('Código não encontrado ou já cancelado.', true);
+    return;
+  }
+
+  let updatedInSupabase = false;
+
+  if (state.supabase) {
+    try {
+      const { error } = await state.supabase
+        .from('gift_reservations')
+        .update({
+          status: 'cancelled',
+          cancelled_by: cancelledBy || null,
+          cancel_note: note || null,
+          cancelled_at: new Date().toISOString()
+        })
+        .eq('cancel_code', cancelCode);
+
+      if (error) throw error;
+      updatedInSupabase = true;
+    } catch (error) {
+      console.error('ERRO SUPABASE CANCELAMENTO:', error);
+    }
+  }
+
+  reservation.status = 'cancelled';
+  reservation.cancelled_by = cancelledBy || null;
+  reservation.cancel_note = note || null;
+  reservation.cancelled_at = new Date().toISOString();
+
+  saveLocalReservations();
+  syncItemsWithReservations();
+  renderCards();
+  updateKPIs();
+  el.cancelForm?.reset();
+
+  const eventText = [
+    'Presente liberado novamente no site do casamento.',
+    '',
+    `Item: ${reservation.item_nome || reservation.item_id}`,
+    `Código: ${cancelCode}`,
+    `Por: ${cancelledBy || '-'}`,
+    `Motivo: ${note || '-'}`
+  ].join('\n');
+
+  showResult({
+    title: 'Presente liberado',
+    message: updatedInSupabase
+      ? 'O presente voltou a ficar disponível.'
+      : 'O presente voltou a ficar disponível. Se o Supabase estiver indisponível, a alteração ficou salva localmente neste navegador.',
+    eventText
+  });
+
+  showToast('Presente liberado novamente.');
 }
 
 function attachEvents() {
-  if (el.search) el.search.addEventListener('input', renderCards);
-  if (el.categoria) el.categoria.addEventListener('change', renderCards);
-  if (el.faixa) el.faixa.addEventListener('change', renderCards);
+  el.search?.addEventListener('input', renderCards);
+  el.categoria?.addEventListener('change', renderCards);
+  el.faixa?.addEventListener('change', renderCards);
 
-  if (el.rsvpForm) {
-    el.rsvpForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const formData = new FormData(el.rsvpForm);
-      await submitRsvp(formData);
-    });
-  }
+  el.rsvpForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await submitRsvp(new FormData(el.rsvpForm));
+  });
 
-  if (el.copyPixBtn) {
-    el.copyPixBtn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(window.APP_CONFIG?.wedding?.pixKey || '');
-        showToast('Chave PIX copiada.');
-      } catch (error) {
-        console.error(error);
-        showToast('Não foi possível copiar a chave PIX.', true);
-      }
-    });
-  }
+  el.cancelForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await cancelGiftReservation(new FormData(el.cancelForm));
+  });
 
-  if (el.shareBtn) {
-    el.shareBtn.addEventListener('click', () => {
-      const text = ${window.APP_CONFIG?.wedding?.whatsappShareText || ''}${window.location.href};
-      window.open(https://wa.me/?text=${encodeURIComponent(text)}, '_blank');
-    });
-  }
+  el.giftForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await submitGiftReservation(new FormData(el.giftForm));
+  });
 
-  if (el.closeResultDialogBtn) {
-    el.closeResultDialogBtn.addEventListener('click', closeResultDialog);
-  }
+  el.copyPixBtn?.addEventListener('click', async () => {
+    try {
+      const pixKey = window.APP_CONFIG?.wedding?.pixKey || '';
+      await navigator.clipboard.writeText(pixKey);
+      showToast('Chave PIX copiada.');
+    } catch (error) {
+      console.error(error);
+      showToast('Não foi possível copiar a chave PIX.', true);
+    }
+  });
 
-  if (el.closeResultBtn) {
-    el.closeResultBtn.addEventListener('click', closeResultDialog);
-  }
+  el.shareBtn?.addEventListener('click', () => {
+    const baseText = window.APP_CONFIG?.wedding?.whatsappShareText || 'Escolha seu presente: ';
+    const text = `${baseText}${window.location.href}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  });
 
-  if (el.resultDialog) {
-    el.resultDialog.addEventListener('click', (event) => {
-      if (event.target === el.resultDialog) closeResultDialog();
-    });
-  }
+  el.closeDialogBtn?.addEventListener('click', closeGiftDialog);
+  el.closeResultDialogBtn?.addEventListener('click', closeResultDialog);
+  el.closeResultBtn?.addEventListener('click', closeResultDialog);
+
+  el.giftDialog?.addEventListener('click', (event) => {
+    if (event.target === el.giftDialog) closeGiftDialog();
+  });
+
+  el.resultDialog?.addEventListener('click', (event) => {
+    if (event.target === el.resultDialog) closeResultDialog();
+  });
 }
 
 async function bootstrap() {
-  initSupabase();
+  await initSupabase();
   fillFilters();
   attachEvents();
+  await loadReservations();
+  await loadRsvps();
   updateKPIs();
   renderCards();
-  await loadRsvps();
 }
 
 bootstrap();
